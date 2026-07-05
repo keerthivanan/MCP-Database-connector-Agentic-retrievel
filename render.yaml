@@ -1,0 +1,13 @@
+# Render.com blueprint — deploy with one click:
+# Render dashboard -> New -> Blueprint -> point at this repo.
+services:
+  - type: web
+    name: mcp-db-assistant
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/meta
+    envVars:
+      - key: OPENAI_API_KEY        # set in the Render dashboard (never in the repo)
+        sync: false
+      - key: COMPANY_DB_DSN        # optional: a Neon.tech PostgreSQL DSN; omit for SQLite
+        sync: false

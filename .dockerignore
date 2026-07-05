@@ -1,0 +1,11 @@
+# CRITICAL: never bake secrets into the image
+.env
+
+# Build artifacts & junk
+frontend/node_modules
+frontend/dist
+__pycache__
+*.pyc
+.git
+db/company.db
+mcp_server/audit.log.jsonl

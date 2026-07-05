@@ -267,7 +267,32 @@ are small and the security/portability gains are decisive — which is why
 
 ---
 
-## 9. MCP configuration reference
+## 9. Deploying it live
+
+The repo ships a multi-stage `Dockerfile` (builds the React app, then runs
+FastAPI serving both the API and the frontend from one container) and a
+`render.yaml` blueprint.
+
+**Render.com (free):**
+1. Dashboard → **New → Blueprint** → select this repo (it reads `render.yaml`).
+2. Set the `OPENAI_API_KEY` env var in the dashboard.
+3. Optional: create a free PostgreSQL DB at [neon.tech](https://neon.tech), run
+   `db/init_db_postgres.py` against it once, and set `COMPANY_DB_DSN` — the app
+   switches engines automatically. Without it, the container rebuilds the demo
+   SQLite DB on every start (fine for a demo).
+4. Deploy → you get a public `https://…onrender.com` URL serving the full app.
+
+The same Dockerfile also works on Hugging Face Spaces (Docker space), Railway,
+and Fly.io. Secrets stay platform-side env vars; `.dockerignore` excludes
+`.env` so a key can never be baked into an image.
+
+> ⚠️ A public URL means strangers can spend your OpenAI credits. For a demo,
+> share the link only with your team, keep a usage cap on the key, and take
+> the service down after the review.
+
+---
+
+## 10. MCP configuration reference
 
 The agent launches the server itself as a stdio subprocess (see
 `DatabaseAgent.__init__`), so no separate process management is needed for
