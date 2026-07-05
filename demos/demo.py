@@ -12,48 +12,24 @@ Four scenarios, mapped to the assessment requirements:
   4. ERROR RECOVERY     The agent is nudged toward a wrong column name; it
                          must read the SQL error and repair the query.
 
-Run:
-    python demo.py            # all scenarios
-    python demo.py 2          # just scenario 2
+Run (from the project root):
+    python demos/demo.py            # all scenarios
+    python demos/demo.py 2          # just scenario 2
 
-Requires ANTHROPIC_API_KEY in the environment (the ONLY secret the agent
-side ever holds — DB access goes exclusively through the MCP server).
+Needs an LLM key in .env (OPENAI_API_KEY or ANTHROPIC_API_KEY) — the ONLY
+secret the agent side ever holds; DB access goes exclusively through MCP.
 """
 
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 
-import asyncio
+# Runnable from anywhere: put the project root on the import path.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dotenv import load_dotenv
-
-# Load .env from the project root so keys/config don't need to be exported
-# in every shell. Existing environment variables take precedence.
-load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
-
-
-def make_agent(**kwargs):
-    """Pick the LLM provider from the environment — proof that the MCP layer
-    is provider-agnostic. Priority: AGENT_PROVIDER env var, else whichever
-    API key is present."""
-    provider = os.environ.get("AGENT_PROVIDER", "").lower()
-    if not provider:
-        if os.environ.get("OPENAI_API_KEY"):
-            provider = "openai"
-        elif os.environ.get("ANTHROPIC_API_KEY"):
-            provider = "anthropic"
-        else:
-            sys.exit(
-                "No LLM credentials found. Set OPENAI_API_KEY or "
-                "ANTHROPIC_API_KEY (or run the no-key demo: python demo_offline.py)."
-            )
-    if provider == "openai":
-        from agent.agent_openai import OpenAIDatabaseAgent
-        return OpenAIDatabaseAgent(**kwargs)
-    from agent.agent import DatabaseAgent
-    return DatabaseAgent(**kwargs)
+from agent.factory import make_agent  # provider chosen from env / .env
 
 
 def banner(title: str) -> None:

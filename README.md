@@ -5,7 +5,7 @@ can only reach that database through the **Model Context Protocol (MCP)**.
 No connection strings in the agent, no arbitrary SQL execution, read-only by
 construction, and a plan → act → observe loop with real error recovery.
 
-> See [PLAN.md](PLAN.md) for the full architecture diagram and design
+> See [docs/PLAN.md](docs/PLAN.md) for the full architecture diagram and design
 > decisions. This README covers setup, the connector flow, and the required
 > conceptual write-up.
 
@@ -25,8 +25,8 @@ python db/init_db.py --force
 copy .env.example .env       # then edit .env: set OPENAI_API_KEY (or ANTHROPIC_API_KEY)
 
 # 4. Run the full demo (4 scenarios) — or one at a time
-python demo.py
-python demo.py 2        # just the JOIN scenario
+python demos/demo.py
+python demos/demo.py 2  # just the JOIN scenario
 ```
 
 The demo auto-detects which key is present (`AGENT_PROVIDER=openai|anthropic`
@@ -44,7 +44,7 @@ error and recovery visible) and the server-side audit log in the sidebar:
 cd frontend; npm install; npm run build; cd ..
 
 # run (FastAPI serves the React build + the API; config comes from .env)
-python -m uvicorn backend:api --port 8000     # open http://localhost:8000
+python -m uvicorn backend.api:api --port 8000     # open http://localhost:8000
 ```
 
 Frontend development mode (hot reload): `cd frontend; npm run dev` → http://localhost:5173
@@ -56,7 +56,7 @@ in for the LLM, so the whole architecture (schema discovery, JOIN, guardrail
 rejection, error recovery) is demonstrable with zero credentials:
 
 ```bash
-python demo_offline.py
+python demos/demo_offline.py
 ```
 
 You can also ask ad-hoc questions:
@@ -76,16 +76,16 @@ python agent/agent.py "Who has the most open critical issues?"
 | `mcp_server/sql_guard.py` | The read-only enforcement: SELECT-only allow-list, keyword block-list, single-statement check, hard row LIMIT |
 | `agent/agent.py` | The agent (Anthropic/Claude): MCP client + tool-use loop (discover schema → plan SQL → execute → recover → answer) |
 | `agent/agent_openai.py` | Same agent, OpenAI driver — shares the prompt/rules from `agent.py`; only the LLM client differs |
-| `demo.py` | 4 end-to-end LLM scenarios: simple, JOIN, clarification, error recovery |
-| `demo_offline.py` | Same MCP round-trip with a scripted planner — runs with **no API key** |
-| `chat.py` | Interactive terminal chat: ask anything live; `/audit` shows the audit log |
+| `demos/demo.py` | 4 end-to-end LLM scenarios: simple, JOIN, clarification, error recovery |
+| `demos/demo_offline.py` | Same MCP round-trip with a scripted planner — runs with **no API key** |
+| `demos/chat.py` | Interactive terminal chat: ask anything live; `/audit` shows the audit log |
 | `frontend/` | **React app** (Vite): chat UI with live agent-trace panel, sample-question chips, audit-log sidebar, guardrail-test button — components in `frontend/src/components/` |
-| `backend.py` | **FastAPI backend**: `/api/ask`, `/api/audit`, `/api/meta`, `/api/guard_demo`; serves the React build |
+| `backend/api.py` | **FastAPI backend**: `/api/ask`, `/api/audit`, `/api/meta`, `/api/guard_demo`; serves the React build |
 | `mcp_server/backends.py` | Engine abstraction: SQLite (default) or PostgreSQL (`COMPANY_DB_DSN`) behind the same 3 tools |
 | `db/init_db_postgres.py` | PostgreSQL variant: same data **plus a SELECT-only `mcp_readonly` role** (real DB-permission layer) |
 | `mcp_server/audit.log.jsonl` | Tamper-proof server-side audit trail of every tool call (auto-created) |
 | `mcp_config.json` | Example MCP host config — note credentials sit in the *server's* env block |
-| `PLAN.md` | Architecture diagram + design decisions |
+| `docs/PLAN.md` | Architecture diagram + design decisions |
 
 ---
 
@@ -307,7 +307,7 @@ python db/init_db_postgres.py     # creates DB 'company' + SELECT-only role 'mcp
 
 # then point the MCP SERVER at it (the agent doesn't change at all):
 $env:COMPANY_DB_DSN="postgresql://mcp_readonly:readonly_pass@localhost:5432/company"
-python demo.py
+python demos/demo.py
 ```
 
 With Postgres, the third defense layer becomes a **real database role with

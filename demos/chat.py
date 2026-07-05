@@ -23,9 +23,12 @@ import json
 import os
 import sys
 
-from demo import make_agent
+# Runnable from anywhere: put the project root on the import path.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-AUDIT_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+from agent.factory import make_agent
+
+AUDIT_LOG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                          "mcp_server", "audit.log.jsonl")
 
 

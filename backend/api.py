@@ -5,14 +5,16 @@ Thin HTTP layer over the same agent + MCP server + guardrails used by every
 other demo. The browser talks to this API; this API talks to the agent; the
 agent talks MCP. Credentials still live only in the MCP server's environment.
 
-Run:
-    uvicorn backend:api --port 8000
+Run (from the project root):
+    uvicorn backend.api:api --port 8000
     # then open http://localhost:8000
 
 Endpoints:
     GET  /api/meta        -> which DB backend + LLM provider are active
     POST /api/ask         -> {question, history} -> {answer, trace, iterations}
+    GET  /api/tables      -> full table browser data (fetched via MCP)
     GET  /api/audit?n=15  -> last n entries of the server-side audit log
+    POST /api/guard_demo  -> raw DELETE straight to MCP (guardrail proof)
 """
 
 from __future__ import annotations
@@ -25,9 +27,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from demo import make_agent
+from agent.factory import make_agent
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # project root
 AUDIT_LOG = os.path.join(ROOT, "mcp_server", "audit.log.jsonl")
 
 api = FastAPI(title="Company DB Assistant API")

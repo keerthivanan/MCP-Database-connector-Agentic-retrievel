@@ -87,7 +87,6 @@ connection string, a driver import, or unrestricted SQL execution.
 
 ```
 task_2 project/
-├── PLAN.md                  ← this file (architecture & design decisions)
 ├── README.md                ← setup, config, security write-up (deliverable)
 ├── requirements.txt         ← Python deps (agent, MCP, drivers, FastAPI)
 ├── .env / .env.example      ← config: LLM key (agent-side) + DB DSN (server-side); git-ignored
@@ -107,13 +106,18 @@ task_2 project/
 │   ├── agent.py              ← plan→act→observe loop (Anthropic driver) + shared prompt/rules
 │   └── agent_openai.py       ← same loop, OpenAI driver (proves provider decoupling)
 │
-├── demo.py                   ← 4 CLI scenarios: simple, JOIN, clarification, error recovery
-├── demo_offline.py           ← same MCP round-trip, scripted planner — no API key needed
-├── demo_output.txt           ← saved transcript of a full live run (PostgreSQL)
-├── chat.py                   ← interactive terminal chat (/audit shows the log)
+├── demos/
+│   ├── demo.py               ← 4 CLI scenarios: simple, JOIN, clarification, error recovery
+│   ├── demo_offline.py       ← same MCP round-trip, scripted planner — no API key needed
+│   └── chat.py               ← interactive terminal chat (/audit shows the log)
 │
-├── backend.py                ← FastAPI: /api/ask /api/audit /api/meta /api/guard_demo + serves React
-├── frontend/                 ← React app (Vite): src/App.jsx + components/ (trace panel, audit panel)
+├── docs/
+│   ├── PLAN.md               ← this file
+│   └── demo_output.txt       ← saved transcript of a full live run (PostgreSQL)
+│
+├── backend/
+│   └── api.py                ← FastAPI: /api/ask /tables /audit /meta /guard_demo + serves React
+├── frontend/                 ← React app (Vite): src/App.jsx + components/ (trace, audit, db views)
 │
 └── mcp_config.json           ← example MCP host config (credentials in the SERVER env block)
 ```

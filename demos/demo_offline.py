@@ -17,7 +17,7 @@ What it proves:
     LLM) uses to repair the query (step 5) — the error-recovery loop.
 
 Run:
-    python demo_offline.py
+    python demos/demo_offline.py
 """
 
 from __future__ import annotations
@@ -27,6 +27,9 @@ import json
 
 from mcp import ClientSession
 from mcp.client.stdio import stdio_client
+
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agent.agent import build_server_params
 
