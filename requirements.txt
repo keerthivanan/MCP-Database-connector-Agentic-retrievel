@@ -1,0 +1,12 @@
+# Core
+anthropic>=0.40          # Anthropic agent driver
+openai>=1.40             # OpenAI agent driver
+mcp>=1.2.0               # Model Context Protocol (server + client)
+python-dotenv>=1.0       # loads .env in every entry point
+
+# Database
+psycopg2-binary>=2.9     # PostgreSQL driver (SQLite needs nothing extra)
+
+# Web application backend
+fastapi>=0.110
+uvicorn>=0.29
