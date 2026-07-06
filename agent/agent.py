@@ -263,7 +263,18 @@ def ask_sync(question: str, **kwargs) -> AgentResult:
 
 
 if __name__ == "__main__":
+    # Run as a script: auto-detect the provider from the environment so
+    # `python agent/agent.py "..."` works with whichever key is configured
+    # (OpenAI or Anthropic), not just Anthropic. (.env is already loaded above.)
     q = " ".join(sys.argv[1:]) or "Fetch employee details where department = 'AI'"
     print(f"\nQUESTION: {q}\n")
-    result = ask_sync(q)
+    provider = os.environ.get("AGENT_PROVIDER", "").lower() or (
+        "openai" if os.environ.get("OPENAI_API_KEY") else "anthropic"
+    )
+    if provider == "openai":
+        from agent_openai import OpenAIDatabaseAgent  # sibling module (script dir on path)
+        agent = OpenAIDatabaseAgent()
+    else:
+        agent = DatabaseAgent()
+    result = asyncio.run(agent.ask(q))
     print(f"\nANSWER ({result.iterations} iterations):\n{result.answer}")
