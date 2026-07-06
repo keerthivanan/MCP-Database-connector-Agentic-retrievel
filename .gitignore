@@ -5,9 +5,10 @@
 __pycache__/
 *.pyc
 
-# Node / React build
+# Node
 frontend/node_modules/
-frontend/dist/
+# note: frontend/dist IS committed on purpose — it lets the web app run with
+# only Python (no Node needed on the host). Rebuild with `npm run build`.
 
 # Local data & logs (regenerable)
 db/company.db
