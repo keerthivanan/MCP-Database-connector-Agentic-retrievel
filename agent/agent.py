@@ -52,8 +52,9 @@ def build_server_params(command: str | None = None, args: list[str] | None = Non
 
     The MCP SDK starts servers with a minimal environment by design, so the
     HOST must explicitly forward the server's own configuration (DB location,
-    audit log path) — mirroring the `env` block of mcp_config.json. These
-    values go straight into the server process; the LLM never sees them.
+    audit log path) — the same way an MCP host passes an `env` block to a
+    server subprocess. These values go straight into the server process; the
+    LLM never sees them.
     """
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     env = get_default_environment()

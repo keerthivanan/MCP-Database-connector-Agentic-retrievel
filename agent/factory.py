@@ -12,6 +12,15 @@ from __future__ import annotations
 import os
 import sys
 
+from dotenv import load_dotenv
+
+# Load the project-root .env BEFORE any credential/provider detection below.
+# make_agent() is the shared entry point for every consumer (demos, chat, web
+# backend), and it inspects OPENAI_API_KEY / ANTHROPIC_API_KEY / AGENT_PROVIDER
+# up front — so the .env must be loaded here, not lazily inside agent.agent
+# (which is imported only AFTER the check). Real env vars still take precedence.
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
+
 
 def make_agent(**kwargs):
     """Return a DatabaseAgent (Anthropic) or OpenAIDatabaseAgent, chosen by
@@ -25,7 +34,7 @@ def make_agent(**kwargs):
         else:
             sys.exit(
                 "No LLM credentials found. Set OPENAI_API_KEY or ANTHROPIC_API_KEY "
-                "in .env (or run the no-key demo: python demos/demo_offline.py)."
+                "in the project .env file."
             )
     if provider == "openai":
         from agent.agent_openai import OpenAIDatabaseAgent
