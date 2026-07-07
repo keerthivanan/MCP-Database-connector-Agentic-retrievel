@@ -124,6 +124,22 @@ ASK_USER_TOOL = {
 }
 
 
+def _result_is_error(mcp_result, result_text: str) -> bool:
+    """True if a tool call failed, so the agent treats it as an observation to
+    recover from. Catches BOTH an MCP-level failure (`isError` — e.g. an
+    unhandled server exception like a missing database, rendered as plain text
+    with no JSON) AND our tools' own structured `{"error": ...}` result — while
+    NOT false-positiving on a successful result that merely contains the
+    substring "error" somewhere (e.g. a column value)."""
+    if getattr(mcp_result, "isError", False):
+        return True
+    try:
+        parsed = json.loads(result_text)
+    except (ValueError, TypeError):
+        return False
+    return isinstance(parsed, dict) and "error" in parsed
+
+
 def _terminal_ask_user(question: str) -> str:
     """Default clarification handler: ask on the terminal; if there is no
     interactive terminal (EOF), instruct the agent to proceed on its own."""
@@ -226,10 +242,10 @@ class DatabaseAgent:
                             result_text = "".join(
                                 c.text for c in mcp_result.content if c.type == "text"
                             )
-                            # Surface server-side rejections/SQL errors as tool
-                            # errors so the model treats them as observations
-                            # to recover from.
-                            is_error = '"error"' in result_text[:200]
+                            # Surface server-side rejections/SQL errors (and hard
+                            # tool failures) as tool errors so the model treats
+                            # them as observations to recover from.
+                            is_error = _result_is_error(mcp_result, result_text)
                             preview = result_text[:160].replace("\n", " ")
                             self._log("observe" if not is_error else "OBSERVE-ERROR", preview)
 

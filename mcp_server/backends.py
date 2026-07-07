@@ -20,6 +20,22 @@ import os
 import sqlite3
 
 
+def _uniquify(cols: list[str]) -> list[str]:
+    """Make column names unique so building per-row dicts never collapses two
+    same-named columns (e.g. `SELECT e.id, p.id` -> ['id', 'id_2']). Without
+    this, dict(zip(cols, row)) would silently drop the first duplicate."""
+    seen: dict[str, int] = {}
+    out: list[str] = []
+    for c in cols:
+        if c in seen:
+            seen[c] += 1
+            out.append(f"{c}_{seen[c]}")
+        else:
+            seen[c] = 0
+            out.append(c)
+    return out
+
+
 class SQLiteBackend:
     name = "sqlite"
 
@@ -82,7 +98,7 @@ class SQLiteBackend:
         conn = self._connect()
         try:
             cursor = conn.execute(sql)
-            cols = [d[0] for d in cursor.description] if cursor.description else []
+            cols = _uniquify([d[0] for d in cursor.description]) if cursor.description else []
             rows = [dict(zip(cols, row)) for row in cursor.fetchall()]
             return cols, rows
         finally:
@@ -183,7 +199,7 @@ class PostgresBackend:
         try:
             with conn.cursor() as cur:
                 cur.execute(sql)
-                cols = [d[0] for d in cur.description] if cur.description else []
+                cols = _uniquify([d[0] for d in cur.description]) if cur.description else []
                 rows = [
                     dict(zip(cols, (str(v) if not isinstance(v, (int, float, type(None))) else v
                                     for v in row)))

@@ -31,13 +31,13 @@ from mcp.client.stdio import stdio_client
 if __package__:
     from .agent import (
         SYSTEM_PROMPT, ASK_USER_TOOL, AgentResult, MAX_ITERATIONS,
-        _terminal_ask_user, build_server_params,
+        _terminal_ask_user, build_server_params, _result_is_error,
     )
 else:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from agent import (
         SYSTEM_PROMPT, ASK_USER_TOOL, AgentResult, MAX_ITERATIONS,
-        _terminal_ask_user, build_server_params,
+        _terminal_ask_user, build_server_params, _result_is_error,
     )
 
 MODEL = os.environ.get("OPENAI_AGENT_MODEL", "gpt-4o-mini")
@@ -133,7 +133,7 @@ class OpenAIDatabaseAgent:
                             result_text = "".join(
                                 c.text for c in mcp_result.content if c.type == "text"
                             )
-                            is_error = '"error"' in result_text[:200]
+                            is_error = _result_is_error(mcp_result, result_text)
                             preview = result_text[:160].replace("\n", " ")
                             self._log("observe" if not is_error else "OBSERVE-ERROR", preview)
 

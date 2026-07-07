@@ -50,6 +50,7 @@ class GuardResult:
     ok: bool
     sql: str = ""
     reason: str = ""
+    applied_limit: int = 0  # the effective row cap on the returned query
 
 
 def _strip_sql_comments(sql: str) -> str:
@@ -58,6 +59,18 @@ def _strip_sql_comments(sql: str) -> str:
     sql = re.sub(r"--[^\n]*", " ", sql)
     sql = re.sub(r"/\*.*?\*/", " ", sql, flags=re.DOTALL)
     return sql
+
+
+def _blank_string_literals(sql: str) -> str:
+    """Replace the CONTENTS of single-quoted string literals with an empty
+    literal, so the keyword block-list and the single-statement check run only
+    over SQL *syntax*, never over data values. Without this, a legitimate
+    read-only search whose value happens to contain a blocked word or a
+    semicolon — e.g. `WHERE title LIKE '%training set%'` or `= 'a;b'` — would
+    be wrongly rejected. A write still cannot hide here: keywords like INSERT/
+    DROP are only meaningful outside quotes, and this only ever removes quoted
+    data. SQL's '' escape (a doubled quote inside a string) is handled."""
+    return re.sub(r"'(?:[^']|'')*'", "''", sql)
 
 
 def _contains_blocked_keyword(sql_lower: str) -> str | None:
@@ -86,7 +99,11 @@ def validate_and_limit(sql: str, requested_limit: int | None = None) -> GuardRes
         return GuardResult(ok=False, reason="Empty query.")
 
     cleaned = _strip_sql_comments(sql).strip()
-    lowered = cleaned.lower().strip()
+    # Run the safety checks over syntax only — string-literal *contents* are
+    # blanked so a data value can never be mistaken for a keyword or a second
+    # statement. Keep `cleaned` (literals intact) for the query we actually run.
+    checkable = _blank_string_literals(cleaned)
+    lowered = checkable.lower().strip()
 
     if not lowered.startswith(ALLOWED_START):
         return GuardResult(
@@ -107,29 +124,36 @@ def validate_and_limit(sql: str, requested_limit: int | None = None) -> GuardRes
             ),
         )
 
-    if _has_multiple_statements(cleaned):
+    if _has_multiple_statements(checkable):
         return GuardResult(
             ok=False,
             reason="Only a single SQL statement is allowed (no ';'-separated batches).",
         )
 
-    # Clamp the row limit regardless of what the model asked for.
-    limit = requested_limit if requested_limit else DEFAULT_LIMIT
+    # Clamp the row limit regardless of what the model asked for. Note `is not
+    # None` so an explicit limit=0 clamps to the minimum of 1 (not the default).
+    limit = requested_limit if requested_limit is not None else DEFAULT_LIMIT
     limit = max(1, min(int(limit), MAX_LIMIT))
 
-    # If the query already has its own LIMIT clause, leave it — but only if
-    # that limit is within our max; otherwise wrap it.
-    existing_limit_match = re.search(r"\blimit\s+(\d+)\s*;?\s*$", lowered)
-    final_sql = cleaned.rstrip().rstrip(";")
+    final_sql = cleaned.rstrip().rstrip(";").rstrip()
 
-    if existing_limit_match:
-        existing_limit = int(existing_limit_match.group(1))
+    # Does the query already END with its own top-level LIMIT [OFFSET] clause?
+    # (Detected on the literal-blanked text so a value like '... limit 5' can't
+    # match.) If so, keep it (clamping only when it exceeds our max). Otherwise
+    # APPEND `LIMIT n` — appending preserves a trailing ORDER BY, which wrapping
+    # the query in an outer `SELECT * FROM (...)` would silently discard.
+    blanked_final = _blank_string_literals(final_sql)
+    tail = re.search(r"\blimit\s+(\d+)(\s+offset\s+\d+)?\s*$", blanked_final, re.IGNORECASE)
+    if tail:
+        existing_limit = int(tail.group(1))
+        offset = tail.group(2) or ""
         if existing_limit > MAX_LIMIT:
-            # Strip the model's LIMIT and replace it with our clamped one.
-            final_sql = re.sub(r"\blimit\s+\d+\s*$", "", final_sql, flags=re.IGNORECASE).rstrip()
-            final_sql = f"{final_sql} LIMIT {MAX_LIMIT}"
-        # else: keep the model's own (smaller/valid) limit as-is
+            final_sql = final_sql[: tail.start()].rstrip() + f" LIMIT {MAX_LIMIT}{offset}"
+            applied = MAX_LIMIT
+        else:
+            applied = existing_limit  # keep the model's own (valid) limit
     else:
-        final_sql = f"SELECT * FROM ({final_sql}) AS _guarded_subquery LIMIT {limit}"
+        final_sql = f"{final_sql} LIMIT {limit}"
+        applied = limit
 
-    return GuardResult(ok=True, sql=final_sql)
+    return GuardResult(ok=True, sql=final_sql, applied_limit=applied)

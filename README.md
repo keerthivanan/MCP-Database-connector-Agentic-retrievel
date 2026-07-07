@@ -80,7 +80,7 @@ python agent/agent.py "Who has the most open critical issues?"
 | `demos/demo_offline.py` | Same MCP round-trip with a scripted planner — runs with **no API key** |
 | `demos/chat.py` | Interactive terminal chat: ask anything live; `/audit` shows the audit log |
 | `frontend/` | **React app** (Vite): chat UI with live agent-trace panel, sample-question chips, audit-log sidebar, guardrail-test button — components in `frontend/src/components/` |
-| `backend/api.py` | **FastAPI backend**: `/api/ask`, `/api/audit`, `/api/meta`, `/api/guard_demo`; serves the React build |
+| `backend/api.py` | **FastAPI backend**: `/api/ask`, `/api/tables`, `/api/audit`, `/api/meta`, `/api/guard_demo`; serves the React build |
 | `mcp_server/backends.py` | Engine abstraction: SQLite (default) or PostgreSQL (`COMPANY_DB_DSN`) behind the same 3 tools |
 | `db/init_db_postgres.py` | PostgreSQL variant: same data **plus a SELECT-only `mcp_readonly` role** (real DB-permission layer) |
 | `mcp_server/audit.log.jsonl` | Tamper-proof server-side audit trail of every tool call (auto-created) |
@@ -164,14 +164,17 @@ hallucinated `SELECT *` on a big table nor a pathological query can blow up
 cost or latency.
 
 **Known trade-off (deliberate):** the guard is keyword-based, not a full SQL
-parser, so a blocked word *inside a string literal* (e.g.
-`WHERE title LIKE '%create%'`) is rejected too — a **false positive**. We
-accept this because (a) the failure mode is safe — it can only over-block,
-never let a write through; (b) the agent reads the rejection message and
-rephrases the query automatically; and (c) the guard stays ~100 lines of
-plain Python that anyone can review line-by-line, with the DB-permission
-layer (SELECT-only role) as the backstop. Swapping in an AST-based validator
-(e.g. `sqlglot`) later would remove the false positives without touching any
+parser. To keep that honest it strips comments **and blanks the contents of
+string literals** before matching, so a blocked word or a semicolon that is
+merely *data* — e.g. `WHERE title LIKE '%training set%'` or `= 'a;b'` — is
+**not** a false positive; only real SQL syntax is checked. The residual
+trade-off is that a keyword-based check can still over-block an exotic query
+(e.g. a blocked word used as an unquoted identifier) — never *under*-block,
+so the failure mode stays safe: it can only reject, never let a write through.
+The agent reads any rejection and rephrases automatically, the guard stays
+~130 lines of plain Python anyone can review, and the DB-permission layer
+(SELECT-only role) is the backstop. Swapping in an AST validator (e.g.
+`sqlglot`) later would remove the residual over-blocking without touching any
 other component.
 
 ---
@@ -184,14 +187,16 @@ other component.
   column in `init_db.py` and rebuild: the agent adapts with zero code change.
 - **Error recovery (scenario 4):** the demo feeds the agent a false claim
   that `issues` has a `severity` column and tells it to use that name
-  unchecked. The first query fails with SQLite's `no such column: severity`;
-  the error comes back as an `is_error` tool result; the agent re-inspects
-  the schema, finds the real column (`priority`), and retries successfully.
-  The trace prints the whole cycle.
-- **Clarification (scenario 3):** "How many unresolved issues are left on the
-  migration?" is deliberately ambiguous ('unresolved' = open only, or also
-  in_progress? which project is "the migration"?). The agent uses its
-  `ask_user` tool to ask one targeted question, then resumes with the answer.
+  unchecked. The first query fails with the database's *no such column /
+  column "severity" does not exist* error (the exact wording depends on the
+  engine); the error comes back as an `is_error` tool result; the agent
+  re-inspects the schema, finds a real column (e.g. `priority`), and retries
+  successfully. The trace prints the whole cycle.
+- **Clarification (scenario 3):** "How many open issues are left on the AI
+  project?" is deliberately ambiguous — **two** projects belong to the AI
+  department (`Project Phoenix` and `Project Atlas`), so the agent can't know
+  which one is meant. It looks up the candidate projects, then uses its
+  `ask_user` tool to ask one targeted question, and resumes with the answer.
 - **Multi-table JOIN (scenario 2):** "Which AI-team members have open issues
   on Project Phoenix?" requires `employees ⋈ issues ⋈ projects` — three
   tables, two foreign keys.
@@ -316,7 +321,7 @@ Environment variables:
 | Variable | Read by | Purpose |
 |---|---|---|
 | `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` | agent | LLM access — the agent's only secret |
-| `AGENT_PROVIDER` | demo | Force `openai` or `anthropic` (default: auto-detect from which key is set) |
+| `AGENT_PROVIDER` | agent factory / web backend | Force `openai` or `anthropic` (default: auto-detect from which key is set) |
 | `COMPANY_DB_PATH` | MCP server | SQLite file path — never visible to the agent/LLM |
 | `COMPANY_DB_DSN` | MCP server | Set to a PostgreSQL DSN to switch engines (e.g. `postgresql://mcp_readonly:...@localhost:5432/company`) |
 | `MCP_AUDIT_LOG` | MCP server | Audit log location (default `mcp_server/audit.log.jsonl`) |

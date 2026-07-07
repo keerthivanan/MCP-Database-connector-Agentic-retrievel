@@ -53,17 +53,24 @@ def web_ask_user(question: str) -> str:
 
 @api.get("/api/meta")
 def meta():
-    if os.environ.get("OPENAI_API_KEY"):
-        provider = "OpenAI"
-        model = os.environ.get("OPENAI_AGENT_MODEL", "gpt-4o-mini")
-    elif os.environ.get("ANTHROPIC_API_KEY"):
-        provider = "Anthropic"
-        model = os.environ.get("AGENT_MODEL", "claude-opus-4-8")
+    # Mirror agent.factory.make_agent's selection exactly: AGENT_PROVIDER wins,
+    # else auto-detect from whichever key is present — so the UI banner always
+    # reflects the provider the agent actually uses.
+    provider = os.environ.get("AGENT_PROVIDER", "").lower()
+    if not provider:
+        if os.environ.get("OPENAI_API_KEY"):
+            provider = "openai"
+        elif os.environ.get("ANTHROPIC_API_KEY"):
+            provider = "anthropic"
+    if provider == "openai":
+        name, model = "OpenAI", os.environ.get("OPENAI_AGENT_MODEL", "gpt-4o-mini")
+    elif provider == "anthropic":
+        name, model = "Anthropic", os.environ.get("AGENT_MODEL", "claude-opus-4-8")
     else:
-        provider, model = "none", "-"
+        name, model = "none", "-"
     return {
         "db_backend": "PostgreSQL" if os.environ.get("COMPANY_DB_DSN") else "SQLite",
-        "provider": provider,
+        "provider": name,
         "model": model,
     }
 

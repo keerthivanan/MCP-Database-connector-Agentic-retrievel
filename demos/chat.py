@@ -6,8 +6,8 @@ agent work in real time: schema discovery, SQL planning, guarded execution,
 error recovery, and clarifying questions (it will ask YOU right here in the
 terminal when it needs to).
 
-Run:
-    python chat.py
+Run (from the project root):
+    python demos/chat.py
 
 Commands:
     /audit     show the last 10 entries of the server-side audit log

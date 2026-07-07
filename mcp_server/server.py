@@ -45,7 +45,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from mcp.server.fastmcp import FastMCP
 
-from sql_guard import validate_and_limit, DEFAULT_LIMIT, MAX_LIMIT
+from sql_guard import validate_and_limit, DEFAULT_LIMIT
 from backends import get_backend
 
 backend = get_backend()
@@ -120,7 +120,7 @@ def run_query(sql: str, limit: int = DEFAULT_LIMIT) -> str:
             "columns": cols,
             "row_count": len(rows),
             "rows": rows,
-            "row_limit_applied": min(max(1, limit), MAX_LIMIT),
+            "row_limit_applied": guard.applied_limit,  # the cap actually applied
         })
     except backend.error_type as exc:
         # Returned as data, not raised: the agent reads this message and

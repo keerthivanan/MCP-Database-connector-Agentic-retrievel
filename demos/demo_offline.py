@@ -112,7 +112,7 @@ async def main() -> None:
 
     print("\n" + "=" * 74)
     print("  Done. Same server, same tools, same guardrails the LLM agent uses —")
-    print("  run 'python demo.py' with an ANTHROPIC_API_KEY for the live version.")
+    print("  run 'python demos/demo.py' with an LLM API key for the live version.")
     print("=" * 74)
 
 

@@ -286,7 +286,7 @@ because:
 2. `mcp_server/sql_guard.py` — SQL allow-list/blocklist validator (plain Python)
 3. `mcp_server/server.py` — MCP server (stdio) wiring the 3 tools to the guard + read-only connection
 4. `agent/agent.py` — MCP client + Claude tool-use loop (plan/act/observe, error recovery, clarification)
-5. `demo.py` — runs all four demo questions end-to-end, printing the full trace
+5. `demos/demo.py` — runs all four demo questions end-to-end, printing the full trace
 6. `README.md` — setup instructions, config, security write-up, conceptual explanation
 7. Run the demo live and confirm all four scenarios behave as designed
 
@@ -295,7 +295,7 @@ because:
 ## 10. What "done" looks like
 
 - `python db/init_db.py` produces `db/company.db` with realistic, FK-linked data
-- `python demo.py` runs four scenarios end-to-end against the live Anthropic API through the MCP server, with visible tool calls, and prints grounded NL answers
+- `python demos/demo.py` runs four scenarios end-to-end against the live LLM (OpenAI or Anthropic) through the MCP server, with visible tool calls, and prints grounded NL answers
 - Attempting a write (e.g. asking the agent to "delete issue 3") is provably rejected at the MCP layer, not just refused by the prompt
 - A deliberately malformed request triggers one visible error → repair → success cycle
 - README documents the MCP config, connector flow, credential isolation, and defense-in-depth reasoning

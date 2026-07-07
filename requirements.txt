@@ -10,3 +10,4 @@ psycopg2-binary>=2.9     # PostgreSQL driver (SQLite needs nothing extra)
 # Web application backend
 fastapi>=0.110
 uvicorn>=0.29
+pydantic>=2.0             # request models in backend/api.py (also a FastAPI dep)
