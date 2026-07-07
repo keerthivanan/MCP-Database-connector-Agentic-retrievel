@@ -105,7 +105,8 @@ def validate_and_limit(sql: str, requested_limit: int | None = None) -> GuardRes
     checkable = _blank_string_literals(cleaned)
     lowered = checkable.lower().strip()
 
-    if not lowered.startswith(ALLOWED_START):
+    # Allow a parenthesized leading SELECT, e.g. "(SELECT ...) UNION (SELECT ...)".
+    if not lowered.lstrip("(").lstrip().startswith(ALLOWED_START):
         return GuardResult(
             ok=False,
             reason=(
