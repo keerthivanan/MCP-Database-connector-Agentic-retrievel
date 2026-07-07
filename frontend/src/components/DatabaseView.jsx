@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
  * (list_tables -> describe_schema -> run_query), so even this browse view
  * respects the connector boundary — check the audit log after loading it.
  */
-export default function DatabaseView() {
+export default function DatabaseView({ onLoaded }) {
   const [tables, setTables] = useState(null);
   const [error, setError] = useState(null);
 
@@ -16,9 +16,14 @@ export default function DatabaseView() {
         if (!r.ok) throw new Error(`API returned ${r.status}`);
         return r.json();
       })
-      .then((d) => setTables(d.tables))
+      .then((d) => {
+        setTables(d.tables);
+        // This browse view issued list_tables/describe_schema/run_query through
+        // MCP, so refresh the audit panel to actually show those entries land.
+        onLoaded?.();
+      })
       .catch((e) => setError(e.message));
-  }, []);
+  }, [onLoaded]);
 
   if (error) return <div className="dbview"><p className="note">Failed to load tables: {error}</p></div>;
   if (!tables) return <div className="dbview"><p className="note">Loading tables through MCP…</p></div>;
@@ -33,7 +38,10 @@ export default function DatabaseView() {
         <section key={t.name} className="dbtable">
           <h3>
             <span className="mono">{t.name}</span>
-            <span className="count">{t.row_count} rows</span>
+            <span className="count">
+              {t.row_count}
+              {t.row_count >= 100 ? "+" : ""} rows
+            </span>
           </h3>
           {t.foreign_keys.length > 0 && (
             <p className="fk">

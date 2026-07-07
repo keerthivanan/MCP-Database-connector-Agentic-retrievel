@@ -17,6 +17,8 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [auditKey, setAuditKey] = useState(0);
   const bottomRef = useRef(null);
+  // Stable reference so passing it to DatabaseView's effect doesn't re-run it.
+  const bumpAudit = useCallback(() => setAuditKey((k) => k + 1), []);
 
   useEffect(() => {
     fetch("/api/meta").then((r) => r.json()).then(setMeta).catch(() => {});
@@ -39,6 +41,7 @@ export default function App() {
     ]);
     try {
       const res = await fetch("/api/guard_demo", { method: "POST" });
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
       const data = await res.json();
       setChat((c) => [
         ...c,
@@ -127,7 +130,7 @@ export default function App() {
       </header>
 
       <main>
-        {view === "database" && <DatabaseView />}
+        {view === "database" && <DatabaseView onLoaded={bumpAudit} />}
         <div className="chatcol" style={{ display: view === "chat" ? "flex" : "none" }}>
           <div className="messages">
             {chat.length === 0 && (
